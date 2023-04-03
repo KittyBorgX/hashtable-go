@@ -46,8 +46,8 @@ func (ht *HashTable) loadFactor() float32 {
 // Function to expand the hash table to avoid collisions
 func (ht *HashTable) expandTable() error {
 	newTable := make([][]Node, len(ht.data)*2)
-	for _, bucket := range ht.data {
-		for _, e := range bucket {
+	for _, data := range ht.data {
+		for _, e := range data {
 			newHash := hash(e.key, len(newTable))
 			newTable[newHash] = append(newTable[newHash], Node{e.key, e.value})
 		}
