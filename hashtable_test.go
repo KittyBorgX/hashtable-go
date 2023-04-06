@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_8k(t *testing.T) {
+func Test8k(t *testing.T) {
 	ht := New()
 
 	// generate 8000 random strings of length 8192 characters
@@ -27,7 +27,7 @@ func Test_8k(t *testing.T) {
 	}
 }
 
-func Test_HashTable_Stress(t *testing.T) {
+func TestStress(t *testing.T) {
 	ht := New()
 
 	// generate 8000 random strings of length 8192 characters
