@@ -55,6 +55,31 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestHashValue(t *testing.T) {
+	// Function to check if the hash value of a string is constant.
+	ht := New()
+	v1 := ht.hash("cherry")
+	v2 := ht.hash("cherry")
+	v3 := ht.hash("cherry")
+
+	if v1 != v2 || v1 != v3 || v2 != v3 {
+		t.Errorf("Value of string 'cherry' not constant")
+	}
+}
+
+func TestRandomHashValue(t *testing.T) {
+	// Function to check if the hash value of a string is constant.
+	ht := New()
+	str := generateRandomString(10)
+	v1 := ht.hash(str)
+	v2 := ht.hash(str)
+	v3 := ht.hash(str)
+
+	if v1 != v2 || v1 != v3 || v2 != v3 {
+		t.Errorf("Value of string %s not constant", str)
+	}
+}
+
 func TestHashCollisions(t *testing.T) {
 	ht := New()
 
