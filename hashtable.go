@@ -1,106 +1,117 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+)
 
-// Constants of offset and Prime taken from
-// https://cs.opensource.google/go/go/+/refs/tags/go1.20.2:src/hash/fnv/fnv.go;l=30
-const map_size = 16
-const fnvOffSetBasis uint64 = 14695981039346656037
-const fnvPrime = 1099511628211
-const loadFactorThreshold = 0.5
-
-type Node struct {
-	key   string
-	value string
-}
+const (
+	initialCap    = 10
+	maxLoadFactor = 0.75
+	minLoadFactor = 0.25
+)
 
 type HashTable struct {
-	length int
-	data   [][]Node
+	data        []*string
+	cap         int
+	size        int
+	loadFactor  float64
+	minCapacity int
 }
 
-func to_bytes(str string) []byte {
-	return []byte(str)
-}
-
-func hash(key string, limit int) int {
-	hash := fnvOffSetBasis
-	for _, b := range to_bytes(key) {
-		hash = hash ^ uint64(b)
-		hash = hash * fnvPrime
-	}
-	return int(hash % uint64(limit))
-}
-
-// The new function - Create a new hashtable
-func New() HashTable {
-	return HashTable{
-		data: make([][]Node, map_size),
+func New() *HashTable {
+	return &HashTable{
+		data:        make([]*string, initialCap),
+		cap:         initialCap,
+		size:        0,
+		loadFactor:  0,
+		minCapacity: initialCap,
 	}
 }
 
-func (ht *HashTable) loadFactor() float32 {
-	return float32(ht.length) / float32(len(ht.data))
+func (ht *HashTable) hash(s string) uint64 {
+	const prime = 1099511628211
+	var hash uint64 = 14695981039346656037
+
+	for i := 0; i < len(s); i++ {
+		hash = hash ^ uint64(s[i])
+		hash = hash * prime
+	}
+
+	return hash
 }
 
-// Function to expand the hash table to avoid collisions
-func (ht *HashTable) expandTable() error {
-	newTable := make([][]Node, len(ht.data)*2)
-	for _, data := range ht.data {
-		for _, e := range data {
-			newHash := hash(e.key, len(newTable))
-			newTable[newHash] = append(newTable[newHash], Node{e.key, e.value})
+func (ht *HashTable) Insert(s string) {
+	if ht.loadFactor >= maxLoadFactor {
+		ht.resize(true)
+	}
+
+	h := ht.hash(s)
+	index := h % uint64(ht.cap)
+	for ; ht.data[index] != nil && *ht.data[index] != s; index = (index + 1) % uint64(ht.cap) {
+	}
+	if ht.data[index] == nil {
+		ht.size++
+	}
+	ht.data[index] = &s
+	ht.loadFactor = float64(ht.size) / float64(ht.cap)
+
+	if ht.size == ht.minCapacity && ht.cap > ht.minCapacity {
+		ht.resize(false)
+	}
+}
+
+func (ht *HashTable) Get(s string) (string, error) {
+	h := ht.hash(s)
+	index := h % uint64(ht.cap)
+	for ; ht.data[index] != nil && *ht.data[index] != s; index = (index + 1) % uint64(ht.cap) {
+	}
+	if ht.data[index] == nil {
+		return "", errors.New("value not found")
+	}
+	return *ht.data[index], nil
+}
+
+func (ht *HashTable) Delete(s string) error {
+	h := ht.hash(s)
+	index := h % uint64(ht.cap)
+	for ; ht.data[index] != nil && *ht.data[index] != s; index = (index + 1) % uint64(ht.cap) {
+	}
+	if ht.data[index] != nil {
+		ht.data[index] = nil
+		ht.size--
+		ht.loadFactor = float64(ht.size) / float64(ht.cap)
+
+		if ht.loadFactor < minLoadFactor && ht.cap > ht.minCapacity {
+			ht.resize(false)
 		}
+		return nil
 	}
-	ht.data = newTable
 	return nil
+
 }
 
-func (ht *HashTable) Insert(key string, value string) {
-	hash := hash(key, len(ht.data))
-	// Check if key is already added. If the key is there
-	// then overwrite the present key.
-	for i, e := range ht.data[hash] {
-		if e.key == key {
-			ht.data[hash][i].value = value
-			return
+func (ht *HashTable) resize(upscale bool) {
+	oldData := ht.data
+	// oldCap := ht.cap
+	if upscale {
+		ht.cap = ht.cap * 2
+	} else {
+		ht.cap = ht.cap / 2
+	}
+	ht.data = make([]*string, ht.cap)
+	ht.size = 0
+	for _, v := range oldData {
+		if v != nil {
+			h := ht.hash(*v)
+			index := h % uint64(ht.cap)
+			for ; ht.data[index] != nil && *ht.data[index] != *v; index = (index + 1) % uint64(ht.cap) {
+			}
+			if ht.data[index] == nil {
+				ht.size++
+			}
+			ht.data[index] = v
 		}
 	}
-
-	ht.data[hash] = append(ht.data[hash], Node{key, value})
-	ht.length += 1
-	if ht.loadFactor() > loadFactorThreshold {
-		// If the table begins to fill up, then we expand the table.
-		// We get to know if the table is filling up if the load factor increases
-		// more than 0.5.
-		ht.expandTable()
-	}
+	ht.loadFactor = float64(ht.size) / float64(ht.cap)
+	ht.minCapacity = int(float64(ht.cap) * minLoadFactor)
 }
-
-// Get function which prints the value if its found or else
-// prints an error message
-func (ht *HashTable) Get(key string) {
-	hash := hash(key, len(ht.data))
-	for _, v := range ht.data[hash] {
-		if v.key == key {
-			fmt.Println("Value found: ", v.value)
-			return
-		}
-	}
-	fmt.Println("error: Could not find key: ", key)
-}
-
-// Delete function which also resizes the table
-func (ht *HashTable) Delete(key string) {
-	hash := hash(key, len(ht.data))
-	for i, v := range ht.data[hash] {
-		if v.key == key {
-			current := ht.data[hash]
-			current[i] = current[len(current)-1]
-			current = current[:len(current)-1]
-			ht.length -= 1
-			ht.data[hash] = current
-		}
-	}
-}
-
