@@ -5,6 +5,76 @@ import (
 	"testing"
 )
 
+func TestInsertAndGet(t *testing.T) {
+	ht := New()
+
+	// insert values
+	ht.Insert("apple")
+	ht.Insert("banana")
+	ht.Insert("cherry")
+	ht.Insert("date")
+
+	// check if all values can be retrieved correctly
+	value, err := ht.Get("apple")
+	if err != nil || value != "apple" {
+		t.Errorf("failed to retrieve the correct value for 'apple'")
+	}
+	value, err = ht.Get("banana")
+	if err != nil || value != "banana" {
+		t.Errorf("failed to retrieve the correct value for 'banana'")
+	}
+	value, err = ht.Get("cherry")
+	if err != nil || value != "cherry" {
+		t.Errorf("failed to retrieve the correct value for 'cherry'")
+	}
+	value, err = ht.Get("date")
+	if err != nil || value != "date" {
+		t.Errorf("failed to retrieve the correct value for 'date'")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	ht := New()
+
+	// insert values
+	ht.Insert("apple")
+	ht.Insert("banana")
+	ht.Insert("cherry")
+	ht.Insert("date")
+
+	// delete value
+	err := ht.Delete("banana")
+	if err != nil {
+		t.Errorf("failed with error 'value not found'")
+	}
+
+	// check if value was deleted
+	_, err = ht.Get("banana")
+	if err == nil {
+		t.Errorf("value 'banana' was not deleted")
+	}
+}
+
+func TestHashCollisions(t *testing.T) {
+	ht := New()
+
+	// generate 1000 random strings of length 10 characters
+	keys := make([]string, 1000)
+	for i := 0; i < 1000; i++ {
+		keys[i] = generateRandomString(10)
+		ht.Insert(keys[i])
+	}
+
+	// check for hash collisions
+	for i := 0; i < 999; i++ {
+		for j := i + 1; j < 1000; j++ {
+			if ht.hash(keys[i]) == ht.hash(keys[j]) {
+				t.Errorf("hash collision detected: %s and %s have the same hash value", keys[i], keys[j])
+			}
+		}
+	}
+}
+
 func Test8k(t *testing.T) {
 	ht := New()
 
@@ -78,56 +148,6 @@ func TestStress(t *testing.T) {
 	}
 	// loadFactor = ht.lo`adFactor
 
-}
-
-func TestInsertAndGet(t *testing.T) {
-	ht := New()
-
-	// insert values
-	ht.Insert("apple")
-	ht.Insert("banana")
-	ht.Insert("cherry")
-	ht.Insert("date")
-
-	// check if all values can be retrieved correctly
-	value, err := ht.Get("apple")
-	if err != nil || value != "apple" {
-		t.Errorf("failed to retrieve the correct value for 'apple'")
-	}
-	value, err = ht.Get("banana")
-	if err != nil || value != "banana" {
-		t.Errorf("failed to retrieve the correct value for 'banana'")
-	}
-	value, err = ht.Get("cherry")
-	if err != nil || value != "cherry" {
-		t.Errorf("failed to retrieve the correct value for 'cherry'")
-	}
-	value, err = ht.Get("date")
-	if err != nil || value != "date" {
-		t.Errorf("failed to retrieve the correct value for 'date'")
-	}
-}
-
-func TestDelete(t *testing.T) {
-	ht := New()
-
-	// insert values
-	ht.Insert("apple")
-	ht.Insert("banana")
-	ht.Insert("cherry")
-	ht.Insert("date")
-
-	// delete value
-	err := ht.Delete("banana")
-	if err != nil {
-		t.Errorf("failed with error 'value not found'")
-	}
-
-	// check if value was deleted
-	_, err = ht.Get("banana")
-	if err == nil {
-		t.Errorf("value 'banana' was not deleted")
-	}
 }
 
 func generateRandomString(length int) string {
